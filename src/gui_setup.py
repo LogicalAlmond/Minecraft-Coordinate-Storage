@@ -1,46 +1,34 @@
-
-import mysql.connector as sql;
 from PyQt5 import QtCore, QtGui, QtWidgets
-from secrets import creds
+from database_commands import DbSetup as dbInit
 
 COLUMNWIDTH = 801/5
+
 class Ui_MainWindow(object):
     
-    #setup db connection and cursor for iteration
     def __init__(self):
-        self.db = sql.connect(
-            host=creds.get('host'),
-            user=creds.get('user'),
-            password=creds.get('pass'),
-            database=creds.get('database')
-        )
-        self.cursor = self.db.cursor(buffered=True)
-        self.version = "1.0.0"
-        
-    #function handles the inputs in the submitFrame. Executes and commits changes to db
+        self.database = dbInit()
+
     def submitData(self):
+        db = self.database
         name = self.nameComboBox.currentText()
         xcoord = int(self.xCoordLineEdit.text())
         ycoord = int(self.yCoordLineEdit.text())
         zcoord = int(self.zCoordLineEdit.text())
         explored = self.exploredComboBox.currentText()
-        query = "INSERT INTO Coordinates (name, x, y, z, explored) VALUES (%s, %s, %s, %s, %s);"
         queryParams = (name, xcoord, ycoord, zcoord, explored)
-        cursor = self.cursor
-        db = self.db
-        cursor.execute(query, queryParams)
-        db.commit()
-        self.loadData() # reload data from db after changes
+        self.database.submitQuery(queryParams)
+        newData = db._reloadData()
+        self.loadData(newData)
         
-    def loadData(self):
-        cursor = self.db.cursor(buffered=True)
-        query = "SELECT * FROM Coordinates;"
-        cursor.execute(query)
-        count = cursor.rowcount
+    def initData(self):
+        data = self.database.queryAll()
+        self.loadData(data)
         
-        self.tableWidget.setRowCount(count)
+    def loadData(self, data):
+        rowCount = len(data)
+        self.tableWidget.setRowCount(rowCount)
         currentIndex = 0
-        for row in cursor:
+        for row in data:
             self.tableWidget.setItem(currentIndex, 0, QtWidgets.QTableWidgetItem(str(row[0])))
             self.tableWidget.setItem(currentIndex, 1, QtWidgets.QTableWidgetItem(str(row[1])))
             self.tableWidget.setItem(currentIndex, 2, QtWidgets.QTableWidgetItem(str(row[2])))
@@ -93,7 +81,7 @@ class Ui_MainWindow(object):
         self.submitFrame.setFrameShadow(QtWidgets.QFrame.Raised)
         self.submitFrame.setObjectName("submitFrame")
         self.titleLabel = QtWidgets.QLabel(self.submitFrame)
-        self.titleLabel.setGeometry(QtCore.QRect(300, 10, 300, 21))
+        self.titleLabel.setGeometry(QtCore.QRect(300, 10, 201, 21))
         font = QtGui.QFont()
         font.setFamily("Montserrat")
         font.setPointSize(18)
@@ -208,7 +196,7 @@ class Ui_MainWindow(object):
         item.setText(_translate("MainWindow", "Z-Coordinate"))
         item = self.tableWidget.horizontalHeaderItem(4)
         item.setText(_translate("MainWindow", "Explored"))
-        self.titleLabel.setText(_translate("MainWindow", "Minecraft Coordinates v%s" % self.version))
+        self.titleLabel.setText(_translate("MainWindow", "Minecraft Coordinates"))
         self.submitButton.setText(_translate("MainWindow", "Submit"))
         self.exploredComboBox.setItemText(0, _translate("MainWindow", "No"))
         self.exploredComboBox.setItemText(1, _translate("MainWindow", "Yes"))
@@ -232,13 +220,3 @@ class Ui_MainWindow(object):
         self.yCoordLabel.setText(_translate("MainWindow", "Y-coordinate"))
         self.zCoordLabel.setText(_translate("MainWindow", "Z-coordinate"))
         self.exploredLabel.setText(_translate("MainWindow", "Explored?"))
-
-if __name__ == "__main__":
-    import sys
-    app = QtWidgets.QApplication(sys.argv)
-    MainWindow = QtWidgets.QMainWindow()
-    ui = Ui_MainWindow()
-    ui.setupUi(MainWindow)
-    ui.loadData()
-    MainWindow.show()
-    sys.exit(app.exec_())
