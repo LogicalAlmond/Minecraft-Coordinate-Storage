@@ -11,7 +11,7 @@ class DbSetup:
             password=creds.get('pass'),
             database=creds.get('database'),
         )
-        self.cursor = self.db.cursor(buffered=True)
+        self.cursor = self.db.cursor(prepared=True)
         print('Connection to SQL database established...')
         
     def submitQuery(self, queryParameters):
